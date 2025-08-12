@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 typedef struct transaction
 {
@@ -27,12 +28,22 @@ int main(int argc, char **argv)
 
     srand(time(NULL));
     transaction newTransaction;
+    pid_t pid;
     while (1)
     {
 
-        generateTransaction(reward, getpid(), &newTransaction);
-        printf("ID:%s\nReward:%d\nValue:%d\nTimeStamp:%ld\n", newTransaction.id, newTransaction.reward, newTransaction.value, newTransaction.timeStamp);
-        usleep(timeIntervalMs);
+        pid = fork();
+        if (pid == 0)
+        {
+            generateTransaction(reward, getpid(), &newTransaction);
+            printf("ID:%s\nReward:%d\nValue:%d\nTimeStamp:%ld\n", newTransaction.id, newTransaction.reward, newTransaction.value, newTransaction.timeStamp);
+            exit(0);
+        }
+        else
+        {
+            usleep(timeIntervalMs);
+            wait(NULL);
+        }
     }
 
     return 0;

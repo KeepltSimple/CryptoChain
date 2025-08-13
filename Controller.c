@@ -4,6 +4,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <unistd.h>
+#include <string.h>
 
 typedef struct transaction
 {
@@ -21,33 +22,28 @@ typedef struct transactionPendingSet
 } transactionPendingSet;
 
 key_t createKey(char);
+void createSharedTrnsPool(transactionPendingSet **, size_t, key_t, int *);
 
 int main()
 {
     transactionPendingSet *pendingTransactions = NULL;
-    size_t shmSize = sizeof(transactionPendingSet) * 10;
-    key_t key = createKey('A');
-    int shmid = 0;
+    size_t shmPoolSize = sizeof(transactionPendingSet) * 10;
+    key_t poolKey = createKey('A');
+    int shmidPool = 0;
 
-    if (key == -1)
+    if (poolKey == -1)
     {
         perror("ftok");
         exit(1);
     }
 
-    shmid = shmget(key, shmSize, IPC_CREAT | 0666);
-    if (shmid == -1)
+    createSharedTrnsPool(&pendingTransactions, shmPoolSize, poolKey, &shmidPool);
+
+    if (shmdt(pendingTransactions) == -1)
     {
-        perror("shmget");
-        exit(1);
+        perror("shmdt");
     }
 
-    pendingTransactions = (transactionPendingSet *)shmat(shmid, NULL, 0);
-    if (pendingTransactions == (transactionPendingSet *)-1)
-    {
-        perror("shmat");
-        exit(1);
-    }
     return 0;
 }
 
@@ -60,6 +56,26 @@ key_t createKey(char projId)
         perror("open");
         exit(1);
     }
-
+    close(fd);
     return ftok(path, projId);
+}
+
+void createSharedTrnsPool(transactionPendingSet **pendingTransactions, size_t shmSize, key_t poolKey, int *shmidPool)
+{
+    *shmidPool = shmget(poolKey, shmSize, IPC_CREAT | 0666);
+    if (*shmidPool == -1)
+    {
+        perror("shmget");
+        exit(1);
+    }
+
+    *pendingTransactions = (transactionPendingSet *)shmat(*shmidPool, NULL, 0);
+    if (*pendingTransactions == (transactionPendingSet *)-1)
+    {
+        perror("shmat");
+        exit(1);
+    }
+
+    memset(*pendingTransactions, 0, shmSize);
+    shmctl(*shmidPool, IPC_RMID, NULL);
 }

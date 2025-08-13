@@ -5,6 +5,9 @@
 #include <time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/ipc.h>
+#include <string.h>
+#include <sys/shm.h>
 
 typedef struct transaction
 {
@@ -16,11 +19,13 @@ typedef struct transaction
 
 int isCMDValid(int, unsigned int *, unsigned int *, char **);
 void generateTransaction(int, pid_t, transaction *);
+void sendTransaction(transaction *);
 
 int main(int argc, char **argv)
 {
     unsigned int reward = 0;
     unsigned int timeIntervalMs = 0;
+
     if (!isCMDValid(argc, &reward, &timeIntervalMs, argv))
     {
         return 0;
@@ -29,6 +34,7 @@ int main(int argc, char **argv)
     srand(time(NULL));
     transaction newTransaction;
     pid_t pid;
+
     while (1)
     {
 
@@ -37,11 +43,12 @@ int main(int argc, char **argv)
         {
             generateTransaction(reward, getpid(), &newTransaction);
             printf("ID:%s\nReward:%d\nValue:%d\nTimeStamp:%ld\n", newTransaction.id, newTransaction.reward, newTransaction.value, newTransaction.timeStamp);
+
             exit(0);
         }
         else
         {
-            usleep(timeIntervalMs);
+            usleep(timeIntervalMs * 1000);
             wait(NULL);
         }
     }
@@ -85,4 +92,8 @@ void generateTransaction(int reward, pid_t pid, transaction *newTransaction)
     newTransaction->timeStamp = time(NULL);
     newTransaction->value = rand() % 2000 + 1;
     snprintf(newTransaction->id, sizeof(newTransaction->id), "%d-%ld", pid, newTransaction->timeStamp);
+}
+
+void sendTransaction(transaction *newTransaction)
+{
 }

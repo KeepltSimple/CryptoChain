@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <unistd.h>
 
 typedef struct transaction
 {
@@ -23,32 +24,28 @@ key_t createKey(char);
 
 int main()
 {
-
+    transactionPendingSet *pendingTransactions = NULL;
+    size_t shmSize = sizeof(transactionPendingSet) * 10;
     key_t key = createKey('A');
-    char *data = NULL;
     int shmid = 0;
+
     if (key == -1)
     {
         perror("ftok");
         exit(1);
     }
-    shmid = shmget(key, 10, IPC_CREAT | 0666);
+
+    shmid = shmget(key, shmSize, IPC_CREAT | 0666);
     if (shmid == -1)
     {
         perror("shmget");
         exit(1);
     }
 
-    data = (char *)shmat(shmid, NULL, 0);
-    if (data == (char *)-1)
+    pendingTransactions = (transactionPendingSet *)shmat(shmid, NULL, 0);
+    if (pendingTransactions == (transactionPendingSet *)-1)
     {
-        perror("shmat child");
-        exit(1);
-    }
-
-    if (shmdt(data) == -1)
-    {
-        perror("shmdt child");
+        perror("shmat");
         exit(1);
     }
     return 0;

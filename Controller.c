@@ -21,7 +21,7 @@ typedef struct transactionPendingSet
     transaction currTransaction;
 } transactionPendingSet;
 
-key_t createKey(char);
+key_t createKey();
 void createSharedTrnsPool(transactionPendingSet **, size_t, key_t, int *);
 
 int main()
@@ -47,7 +47,7 @@ int main()
     return 0;
 }
 
-key_t createKey(char projId)
+key_t createKey()
 {
     const char *path = "/tmp/myproject.ipc";
     int fd = open(path, O_CREAT | O_RDWR, 0666);
@@ -57,7 +57,7 @@ key_t createKey(char projId)
         exit(1);
     }
     close(fd);
-    return ftok(path, projId);
+    return ftok(path, 'A');
 }
 
 void createSharedTrnsPool(transactionPendingSet **pendingTransactions, size_t shmSize, key_t poolKey, int *shmidPool)

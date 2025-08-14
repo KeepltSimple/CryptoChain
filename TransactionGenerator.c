@@ -29,6 +29,7 @@ int isCMDValid(int, unsigned int *, unsigned int *, char **);
 void generateTransaction(int, pid_t, transaction *);
 void sendTransaction(transaction *);
 void atachToTrnsPool(transactionPendingSet **);
+key_t createKey();
 
 int main(int argc, char **argv)
 {

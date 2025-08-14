@@ -28,7 +28,7 @@ typedef struct transactionPendingSet
 int isCMDValid(int, unsigned int *, unsigned int *, char **);
 void generateTransaction(int, pid_t, transaction *);
 void sendTransaction(transaction *);
-void atachToTrnsPool(transactionPendingSet **);
+void atachToTrnsPool(transactionPendingSet **, key_t);
 key_t createKey();
 
 int main(int argc, char **argv)
@@ -44,7 +44,16 @@ int main(int argc, char **argv)
     srand(time(NULL));
     transaction newTransaction;
     transactionPendingSet *pendingTransactions = NULL;
-    atachToTrnsPool(&pendingTransactions);
+
+    key_t poolKey = createKey();
+
+    if (poolKey == -1)
+    {
+        perror("ftok");
+        exit(1);
+    }
+
+    atachToTrnsPool(&pendingTransactions, poolKey);
     pid_t pid;
 
     while (1)
@@ -121,4 +130,22 @@ key_t createKey()
 
 void sendTransaction(transaction *newTransaction)
 {
+}
+
+void atachToTrnsPool(transactionPendingSet **pendingTransactions, key_t poolKey)
+{
+
+    int shmidPool = shmget(poolKey, 0, 0666);
+    if (shmidPool == -1)
+    {
+        perror("shmget");
+        exit(1);
+    }
+
+    *pendingTransactions = (transactionPendingSet *)shmat(shmidPool, NULL, 0);
+    if (*pendingTransactions == (transactionPendingSet *)-1)
+    {
+        perror("shmat");
+        exit(1);
+    }
 }

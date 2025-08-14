@@ -5,6 +5,7 @@
 #include <sys/shm.h>
 #include <unistd.h>
 #include <string.h>
+#include <semaphore.h>
 
 typedef struct transaction
 {
@@ -30,6 +31,9 @@ int main()
     size_t shmPoolSize = sizeof(transactionPendingSet) * 10;
     key_t poolKey = createKey();
     int shmidPool = 0;
+    sem_t *poolSem;
+    char *name = "poolSema";
+    poolSem = sem_open(name, O_CREAT, 0666, 1);
 
     if (poolKey == -1)
     {
@@ -38,12 +42,16 @@ int main()
     }
 
     createSharedTrnsPool(&pendingTransactions, shmPoolSize, poolKey, &shmidPool);
-
+    sem_post(poolSem);
+    sleep(5);
+    sem_wait(poolSem);
     if (shmdt(pendingTransactions) == -1)
     {
         perror("shmdt");
     }
-
+    shmctl(shmidPool, IPC_RMID, NULL);
+    sem_close(poolSem);
+    sem_unlink(name);
     return 0;
 }
 
@@ -77,5 +85,4 @@ void createSharedTrnsPool(transactionPendingSet **pendingTransactions, size_t sh
     }
 
     memset(*pendingTransactions, 0, shmSize);
-    shmctl(*shmidPool, IPC_RMID, NULL);
 }

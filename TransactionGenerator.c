@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sys/shm.h>
 #include <fcntl.h>
+#include <semaphore.h>
 
 typedef struct transaction
 {
@@ -34,6 +35,9 @@ key_t createKey();
 
 int main(int argc, char **argv)
 {
+    char *name = "poolSema";
+    sem_t *poolSem;
+    poolSem = sem_open(name, O_CREAT, 0666, 0);
     unsigned int reward = 0;
     unsigned int timeIntervalMs = 0;
 
@@ -54,7 +58,13 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    // semaforo que espera até ser criada a memoria;
+    sem_wait(poolSem);
     atachToTrnsPool(&pendingTransactions, poolKey);
+    sem_post(poolSem);
+    sem_close(poolSem);
+    sem_close(poolSem);
+
     pid_t pid;
 
     while (1)

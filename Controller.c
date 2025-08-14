@@ -28,7 +28,7 @@ int main()
 {
     transactionPendingSet *pendingTransactions = NULL;
     size_t shmPoolSize = sizeof(transactionPendingSet) * 10;
-    key_t poolKey = createKey('A');
+    key_t poolKey = createKey();
     int shmidPool = 0;
 
     if (poolKey == -1)

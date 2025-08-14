@@ -8,6 +8,7 @@
 #include <sys/ipc.h>
 #include <string.h>
 #include <sys/shm.h>
+#include <fcntl.h>
 
 typedef struct transaction
 {
@@ -102,6 +103,19 @@ void generateTransaction(int reward, pid_t pid, transaction *newTransaction)
     newTransaction->timeStamp = time(NULL);
     newTransaction->value = rand() % 2000 + 1;
     snprintf(newTransaction->id, sizeof(newTransaction->id), "%d-%ld", pid, newTransaction->timeStamp);
+}
+
+key_t createKey()
+{
+    const char *path = "/tmp/myproject.ipc";
+    int fd = open(path, O_CREAT | O_RDWR, 0666);
+    if (fd == -1)
+    {
+        perror("open");
+        exit(1);
+    }
+    close(fd);
+    return ftok(path, 'A');
 }
 
 void sendTransaction(transaction *newTransaction)

@@ -29,6 +29,7 @@ int isCMDValid(int, unsigned int *, unsigned int *, char **);
 void generateTransaction(int, pid_t, transaction *);
 void sendTransaction(transaction *);
 void atachToTrnsPool(transactionPendingSet **, key_t);
+size_t getPoolSize(key_t);
 key_t createKey();
 
 int main(int argc, char **argv)
@@ -148,4 +149,24 @@ void atachToTrnsPool(transactionPendingSet **pendingTransactions, key_t poolKey)
         perror("shmat");
         exit(1);
     }
+}
+
+size_t getPoolSize(key_t poolKey)
+{
+    struct shmid_ds shmInfo;
+
+    int shmidPool = shmget(poolKey, 0, 0666);
+    if (shmidPool == -1)
+    {
+        perror("shmget");
+        exit(1);
+    }
+
+    if (shmctl(shmidPool, IPC_STAT, &shmInfo) == -1)
+    {
+        perror("shmctl");
+        exit(1);
+    }
+    size_t shmSize = shmInfo.shm_segsz;
+    return shmSize;
 }

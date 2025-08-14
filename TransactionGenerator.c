@@ -17,9 +17,17 @@ typedef struct transaction
     time_t timeStamp;
 } transaction;
 
+typedef struct transactionPendingSet
+{
+    int empty;
+    int age;
+    transaction currTransaction;
+} transactionPendingSet;
+
 int isCMDValid(int, unsigned int *, unsigned int *, char **);
 void generateTransaction(int, pid_t, transaction *);
 void sendTransaction(transaction *);
+void atachToTrnsPool(transactionPendingSet **);
 
 int main(int argc, char **argv)
 {
@@ -33,6 +41,8 @@ int main(int argc, char **argv)
 
     srand(time(NULL));
     transaction newTransaction;
+    transactionPendingSet *pendingTransactions = NULL;
+    atachToTrnsPool(&pendingTransactions);
     pid_t pid;
 
     while (1)

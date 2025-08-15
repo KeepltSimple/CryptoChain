@@ -1,41 +1,19 @@
-#include <stdlib.h>
-#include <stdio.h>
+
 #include <errno.h>
-#include <unistd.h>
-#include <time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <sys/ipc.h>
 #include <string.h>
 #include <sys/shm.h>
-#include <fcntl.h>
 #include <semaphore.h>
-
-typedef struct transaction
-{
-    char id[20];
-    unsigned int reward;
-    unsigned int value;
-    time_t timeStamp;
-} transaction;
-
-typedef struct transactionPendingSet
-{
-    int empty;
-    int age;
-    transaction currTransaction;
-} transactionPendingSet;
+#include "TransacPool.h"
 
 int isCMDValid(int, unsigned int *, unsigned int *, char **);
 void generateTransaction(int, pid_t, transaction *);
 void sendTransaction(transaction *);
-void atachToTrnsPool(transactionPendingSet **, key_t);
-size_t getPoolSize(key_t);
-key_t createKey();
 
 int main(int argc, char **argv)
 {
-    char *name = "poolSema";
+    char *name = POOL_SEMA;
     sem_t *poolSem;
     poolSem = sem_open(name, O_CREAT, 0666, 0);
     unsigned int reward = 0;
@@ -50,7 +28,7 @@ int main(int argc, char **argv)
     transaction newTransaction;
     transactionPendingSet *pendingTransactions = NULL;
 
-    key_t poolKey = createKey();
+    key_t poolKey = createPoolKey();
 
     if (poolKey == -1)
     {
@@ -58,11 +36,9 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    // semaforo que espera até ser criada a memoria;
     sem_wait(poolSem);
     atachToTrnsPool(&pendingTransactions, poolKey);
     sem_post(poolSem);
-    sem_close(poolSem);
     sem_close(poolSem);
 
     pid_t pid;
@@ -124,59 +100,4 @@ void generateTransaction(int reward, pid_t pid, transaction *newTransaction)
     newTransaction->timeStamp = time(NULL);
     newTransaction->value = rand() % 2000 + 1;
     snprintf(newTransaction->id, sizeof(newTransaction->id), "%d-%ld", pid, newTransaction->timeStamp);
-}
-
-key_t createKey()
-{
-    const char *path = "/tmp/myproject.ipc";
-    int fd = open(path, O_CREAT | O_RDWR, 0666);
-    if (fd == -1)
-    {
-        perror("open");
-        exit(1);
-    }
-    close(fd);
-    return ftok(path, 'A');
-}
-
-void sendTransaction(transaction *newTransaction)
-{
-}
-
-void atachToTrnsPool(transactionPendingSet **pendingTransactions, key_t poolKey)
-{
-
-    int shmidPool = shmget(poolKey, 0, 0666);
-    if (shmidPool == -1)
-    {
-        perror("shmget");
-        exit(1);
-    }
-
-    *pendingTransactions = (transactionPendingSet *)shmat(shmidPool, NULL, 0);
-    if (*pendingTransactions == (transactionPendingSet *)-1)
-    {
-        perror("shmat");
-        exit(1);
-    }
-}
-
-size_t getPoolSize(key_t poolKey)
-{
-    struct shmid_ds shmInfo;
-
-    int shmidPool = shmget(poolKey, 0, 0666);
-    if (shmidPool == -1)
-    {
-        perror("shmget");
-        exit(1);
-    }
-
-    if (shmctl(shmidPool, IPC_STAT, &shmInfo) == -1)
-    {
-        perror("shmctl");
-        exit(1);
-    }
-    size_t shmSize = shmInfo.shm_segsz;
-    return shmSize;
 }

@@ -1,38 +1,18 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <unistd.h>
+
 #include <string.h>
 #include <semaphore.h>
+#include "TransacPool.h"
 
-typedef struct transaction
-{
-    char id[20];
-    unsigned int reward;
-    unsigned int value;
-    time_t timeStamp;
-} transaction;
-
-typedef struct transactionPendingSet
-{
-    int empty;
-    int age;
-    transaction currTransaction;
-} transactionPendingSet;
-
-key_t createKey();
 void createSharedTrnsPool(transactionPendingSet **, size_t, key_t, int *);
 
 int main()
 {
     transactionPendingSet *pendingTransactions = NULL;
     size_t shmPoolSize = sizeof(transactionPendingSet) * 10;
-    key_t poolKey = createKey();
+    key_t poolKey = createPoolKey();
     int shmidPool = 0;
     sem_t *poolSem;
-    char *name = "poolSema";
+    char *name = POOL_SEMA;
     poolSem = sem_open(name, O_CREAT, 0666, 1);
 
     if (poolKey == -1)
@@ -53,19 +33,6 @@ int main()
     sem_close(poolSem);
     sem_unlink(name);
     return 0;
-}
-
-key_t createKey()
-{
-    const char *path = "/tmp/myproject.ipc";
-    int fd = open(path, O_CREAT | O_RDWR, 0666);
-    if (fd == -1)
-    {
-        perror("open");
-        exit(1);
-    }
-    close(fd);
-    return ftok(path, 'A');
 }
 
 void createSharedTrnsPool(transactionPendingSet **pendingTransactions, size_t shmSize, key_t poolKey, int *shmidPool)

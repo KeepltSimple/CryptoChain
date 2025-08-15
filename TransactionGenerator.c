@@ -19,7 +19,12 @@ int main(int argc, char **argv)
 {
     char *name = POOL_SEMA;
     sem_t *poolSem;
-    poolSem = sem_open(name, O_CREAT, 0666, 0);
+    poolSem = sem_open(name, 0);
+    if (poolSem == SEM_FAILED)
+    {
+        perror("sem_open");
+        exit(1);
+    }
     unsigned int reward = 0;
     unsigned int timeIntervalMs = 0;
 

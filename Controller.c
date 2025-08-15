@@ -17,7 +17,12 @@ int main()
     int shmidPool = 0;
     sem_t *poolSem;
     char *name = POOL_SEMA;
-    poolSem = sem_open(name, O_CREAT, 0666, 1);
+    poolSem = sem_open(name, O_CREAT | O_EXCL, 0666, 0);
+    if (poolSem == SEM_FAILED)
+    {
+        perror("sem_open");
+        exit(1);
+    }
 
     if (poolKey == -1)
     {
@@ -41,7 +46,7 @@ int main()
 
 void createSharedTrnsPool(transactionPendingSet **pendingTransactions, size_t shmSize, key_t poolKey, int *shmidPool)
 {
-    *shmidPool = shmget(poolKey, shmSize, IPC_CREAT | 0666);
+    *shmidPool = shmget(poolKey, shmSize, IPC_CREAT | IPC_EXCL | 0666);
     if (*shmidPool == -1)
     {
         perror("shmget");

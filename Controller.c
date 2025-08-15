@@ -1,7 +1,11 @@
-
+#include "TransacPool.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/shm.h>
 #include <string.h>
 #include <semaphore.h>
-#include "TransacPool.h"
 
 void createSharedTrnsPool(transactionPendingSet **, size_t, key_t, int *);
 

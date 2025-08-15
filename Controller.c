@@ -83,6 +83,6 @@ void createSharedTrnsPool(transactionPendingSet **pendingTransactions, size_t sh
         perror("shmat");
         exit(1);
     }
-
+    ///
     memset(*pendingTransactions, 0, shmSize);
 }

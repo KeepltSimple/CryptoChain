@@ -13,18 +13,21 @@
 
 int isCMDValid(int, unsigned int *, unsigned int *, char **);
 void generateTransaction(int, pid_t, transaction *);
-void sendTransaction(transaction *);
+void sendTransaction(transaction *, int);
 
 int main(int argc, char **argv)
 {
-    char *name = POOL_SEMA;
-    sem_t *poolSem;
-    poolSem = sem_open(name, 0);
+
+    sem_t *poolSem = NULL;
+    int poolLength = 0;
+    poolSem = sem_open(POOL_SEMA, 0);
+
     if (poolSem == SEM_FAILED)
     {
         perror("sem_open");
         exit(1);
     }
+
     unsigned int reward = 0;
     unsigned int timeIntervalMs = 0;
 
@@ -34,6 +37,7 @@ int main(int argc, char **argv)
     }
 
     srand(time(NULL));
+
     transaction newTransaction;
     transactionPendingSet *pendingTransactions = NULL;
 
@@ -47,8 +51,7 @@ int main(int argc, char **argv)
 
     sem_wait(poolSem);
     atachToTrnsPool(&pendingTransactions, poolKey);
-    sem_post(poolSem);
-    sem_close(poolSem);
+    poolLength = getPoolSize(poolKey) / sizeof(transactionPendingSet);
 
     pid_t pid;
 
@@ -60,6 +63,7 @@ int main(int argc, char **argv)
         {
             generateTransaction(reward, getpid(), &newTransaction);
             printf("ID:%s\nReward:%d\nValue:%d\nTimeStamp:%ld\n", newTransaction.id, newTransaction.reward, newTransaction.value, newTransaction.timeStamp);
+            // send transaction
 
             exit(0);
         }
@@ -69,6 +73,8 @@ int main(int argc, char **argv)
             wait(NULL);
         }
     }
+
+    sem_close(poolSem);
 
     return 0;
 }

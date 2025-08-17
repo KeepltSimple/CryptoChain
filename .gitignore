@@ -1,5 +1,5 @@
 *.o
 *.exe
 *.out
-settings.json
-TransactionGenerator
+*.json
+

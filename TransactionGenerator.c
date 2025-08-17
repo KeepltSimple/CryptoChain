@@ -9,14 +9,33 @@
 #include <sys/wait.h>
 #include <string.h>
 #include <sys/shm.h>
+#include <signal.h>
 #include <semaphore.h>
+
+volatile sig_atomic_t sigintReceived = 0;
 
 int isCMDValid(int, unsigned int *, unsigned int *, char **);
 void generateTransaction(int, pid_t, transaction *);
 void sendTransaction(transaction *, int, transactionPendingSet *);
+void sigintHandler(int);
 
 int main(int argc, char **argv)
 {
+    sigset_t blockAllset;
+    sigfillset(&blockAllset);
+    sigprocmask(SIG_SETMASK, &blockAllset, NULL);
+
+    sigset_t sigintSet;
+    sigemptyset(&sigintSet);
+    sigaddset(&sigintSet, SIGINT);
+
+    struct sigaction sa;
+    sa.sa_handler = sigintHandler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT, &sa, NULL);
+
+    sigprocmask(SIG_UNBLOCK, &sigintSet, NULL);
 
     pid_t pid;
     int poolLength = 0;
@@ -24,8 +43,9 @@ int main(int argc, char **argv)
     unsigned int timeIntervalMs = 0;
     transaction newTransaction;
     transactionPendingSet *pendingTransactions = NULL;
-    key_t poolKey = 0;
     sem_t *poolSem = NULL;
+
+    key_t poolKey = 0;
 
     poolKey = createPoolKey();
     if (poolKey == -1)
@@ -53,16 +73,18 @@ int main(int argc, char **argv)
     atachToTrnsPool(&pendingTransactions, poolKey);
     poolLength = getPoolSize(poolKey) / sizeof(transactionPendingSet);
 
-    while (1)
+    while (!sigintReceived)
     {
 
         pid = fork();
         if (pid == 0)
         {
-            generateTransaction(reward, getpid(), &newTransaction);
-            // printf("ID:%s\nReward:%d\nValue:%d\nTimeStamp:%ld\n", newTransaction.id, newTransaction.reward, newTransaction.value, newTransaction.timeStamp);
-            sendTransaction(&newTransaction, poolLength, pendingTransactions);
 
+            generateTransaction(reward, getpid(), &newTransaction);
+
+            sigprocmask(SIG_BLOCK, &sigintSet, NULL);
+            sendTransaction(&newTransaction, poolLength, pendingTransactions);
+            sigprocmask(SIG_UNBLOCK, &sigintSet, NULL);
             exit(0);
         }
         else
@@ -134,7 +156,13 @@ void sendTransaction(transaction *newTransaction, int poolLimit, transactionPend
             pendingTransactions[i].currTransaction.timeStamp = newTransaction->timeStamp;
             pendingTransactions[i].currTransaction.value = newTransaction->value;
             pendingTransactions[i].empty = 1;
+
             break;
         }
     }
+}
+
+void sigintHandler(int sig)
+{
+    sigintReceived = 1;
 }

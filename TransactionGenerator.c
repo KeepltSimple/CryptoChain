@@ -32,7 +32,7 @@ int main(int argc, char **argv)
     struct sigaction sa;
     sa.sa_handler = sigintHandler;
     sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
+    sa.sa_flags = SA_RESTART;
     sigaction(SIGINT, &sa, NULL);
 
     sigprocmask(SIG_UNBLOCK, &sigintSet, NULL);
@@ -69,7 +69,6 @@ int main(int argc, char **argv)
 
     srand(time(NULL));
 
-    sem_wait(poolSem);
     atachToTrnsPool(&pendingTransactions, poolKey);
     poolLength = getPoolSize(poolKey) / sizeof(transactionPendingSet);
 
@@ -100,7 +99,6 @@ int main(int argc, char **argv)
         perror("shmdt");
     }
 
-    sem_post(poolSem);
     sem_close(poolSem);
 
     return 0;

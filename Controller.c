@@ -6,17 +6,21 @@
 #include <sys/shm.h>
 #include <string.h>
 #include <semaphore.h>
+#include <signal.h>
 
 void createSharedTrnsPool(transactionPendingSet **, size_t, key_t, int *);
+void readConfigFile();
 
 int main()
 {
+
     transactionPendingSet *pendingTransactions = NULL;
     size_t shmPoolSize = sizeof(transactionPendingSet) * 10;
     key_t poolKey = createPoolKey();
     int shmidPool = 0;
     sem_t *poolSem;
     char *name = POOL_SEMA;
+
     poolSem = sem_open(name, O_CREAT | O_EXCL, 0666, 0);
     if (poolSem == SEM_FAILED)
     {
@@ -32,17 +36,21 @@ int main()
 
     createSharedTrnsPool(&pendingTransactions, shmPoolSize, poolKey, &shmidPool);
     sem_post(poolSem);
-    sleep(5);
+    sleep(10);
     sem_wait(poolSem);
+
     if (shmdt(pendingTransactions) == -1)
     {
         perror("shmdt");
     }
+
     shmctl(shmidPool, IPC_RMID, NULL);
     sem_close(poolSem);
     sem_unlink(name);
     return 0;
 }
+
+void readConfigFile() {};
 
 void createSharedTrnsPool(transactionPendingSet **pendingTransactions, size_t shmSize, key_t poolKey, int *shmidPool)
 {

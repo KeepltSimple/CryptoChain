@@ -13,7 +13,7 @@
 #include <semaphore.h>
 
 volatile sig_atomic_t sigintReceived = 0;
-
+static pid_t parentPid;
 int isCMDValid(int, unsigned int *, unsigned int *, char **);
 void generateTransaction(int, pid_t, transaction *);
 void sendTransaction(transaction *, int, transactionPendingSet *);
@@ -21,6 +21,9 @@ void sigintHandler(int);
 
 int main(int argc, char **argv)
 {
+    parentPid = getpid();
+    srand(time(NULL));
+
     sigset_t blockAllset;
     sigfillset(&blockAllset);
     sigprocmask(SIG_SETMASK, &blockAllset, NULL);
@@ -67,8 +70,7 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    srand(time(NULL));
-
+    sem_wait(poolSem);
     atachToTrnsPool(&pendingTransactions, poolKey);
     poolLength = getPoolSize(poolKey) / sizeof(transactionPendingSet);
 
@@ -78,8 +80,9 @@ int main(int argc, char **argv)
         pid = fork();
         if (pid == 0)
         {
-
+            sigprocmask(SIG_BLOCK, &sigintSet, NULL);
             generateTransaction(reward, getpid(), &newTransaction);
+            sigprocmask(SIG_UNBLOCK, &sigintSet, NULL);
 
             sigprocmask(SIG_BLOCK, &sigintSet, NULL);
             sendTransaction(&newTransaction, poolLength, pendingTransactions);
@@ -99,6 +102,7 @@ int main(int argc, char **argv)
         perror("shmdt");
     }
 
+    sem_post(poolSem);
     sem_close(poolSem);
 
     return 0;
@@ -162,5 +166,8 @@ void sendTransaction(transaction *newTransaction, int poolLimit, transactionPend
 
 void sigintHandler(int sig)
 {
+    (void)sig;
+    if (getpid() != parentPid)
+        exit(0);
     sigintReceived = 1;
 }
